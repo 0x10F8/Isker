@@ -6,4 +6,10 @@ def get_region_ids():
     return response
 
 
-print(get_region_ids())
+def get_region_info(id):
+    response = Api.do_get('universe/regions/' + str(id), {})
+    return response
+
+
+for id in get_region_ids():
+    print(get_region_info(id))
