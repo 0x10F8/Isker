@@ -2,14 +2,20 @@ import Api
 
 
 def get_region_ids():
-    response = Api.do_get('universe/regions', {})
-    return response
+    return Api.do_get(1, 'universe/regions', {})
 
 
 def get_region_info(id):
-    response = Api.do_get('universe/regions/' + str(id), {})
-    return response
+    return Api.do_get(1, 'universe/regions/' + str(id), {})
 
 
-for id in get_region_ids():
-    print(get_region_info(id))
+def get_system_ids():
+    return Api.do_get(1, 'universe/systems', {})
+
+
+def get_system_info(id):
+    return Api.do_get(4, 'universe/systems/' + str(id), {})
+
+
+for id in get_system_ids():
+    print(get_system_info(id))

@@ -1,20 +1,23 @@
 import requests
 
 DATASOURCE = 'tranquility'
-VERSION = 'v1'
 BASE_URL = 'https://esi.evetech.net'
+RETRIES = 4
 
 
-def get_url():
-    return BASE_URL + '/' + VERSION
+def build_url(version, path):
+    return BASE_URL + '/' + 'v' + str(version) + '/' + path
 
 
-def build_url(path):
-    return get_url() + '/' + path
+def do_get(version, path, params):
+    return do_get_retry(version, path, params, RETRIES)
 
 
-def do_get(path, params):
-    url = build_url(path)
+def do_get_retry(version, path, params, retries_remaining):
+    url = build_url(version, path)
     params['datasource'] = DATASOURCE
-    response = requests.get(url=url, params=params)
-    return response.json()
+    try:
+        response = requests.get(url=url, params=params).json()
+    except:
+        response = do_get_retry(version, path, params, (retries_remaining - 1))
+    return response
