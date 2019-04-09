@@ -1,4 +1,7 @@
-#pycharm
+# Ignore the seeded storage file saves]
+*.json
+
+# pycharm
 .pycharm/
 .idea/
 
