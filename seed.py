@@ -6,6 +6,8 @@ from multiprocessing.dummy import Pool
 
 THREADS = 20
 
+REMOVE_NON_STATION_TRADES = True
+
 
 def get_all_buy_orders(market_datas):
     """
@@ -117,6 +119,12 @@ def multi_thread_market_call(region_ids):
     thread_pool.close()
     thread_pool.join()
     for region_id, result in results:
+        filtered_orders = []
+        if REMOVE_NON_STATION_TRADES:
+            for order in result:
+                if order['location_id'] <= universe.STATION_ID_LIMIT:
+                    filtered_orders.append(order)
+                result = filtered_orders
         resulting_dict[region_id] = result
     return resulting_dict
 

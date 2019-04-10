@@ -43,6 +43,23 @@ def is_high_sec_order(order, system_infos):
     return system_info['security_status'] >= 0.5
 
 
+def is_valid_location(location):
+    is_valid = False
+    if location is not None:
+        if 'error' not in location.keys():
+            is_valid = True
+    return is_valid
+
+
+def filter_orders_to_system(orders, location_infos, system_name):
+    filtered = []
+    for order in orders:
+        location_info = location_infos[str(order['location_id'])]
+        if is_valid_location(location_info) and system_name in location_info['name']:
+            filtered.append(order)
+    return filtered
+
+
 # Filter out the low/null orders
 print('Filtering out low and null orders...')
 buy_orders = [order for order in buy_orders if is_high_sec_order(order, system_infos)]
@@ -53,22 +70,6 @@ type_ids = filestore.load_type_ids()
 
 # Get the item information
 types = filestore.load_type_info()
-
-buy_orders_by_type = {}
-# Map the orders to the type of item
-for order in buy_orders:
-    type_id = order['type_id']
-    if type_id not in buy_orders_by_type.keys():
-        buy_orders_by_type[type_id] = []
-    buy_orders_by_type[type_id].append(order)
-
-sell_orders_by_type = {}
-# Map the orders to the type of item
-for order in sell_orders:
-    type_id = order['type_id']
-    if type_id not in sell_orders_by_type.keys():
-        sell_orders_by_type[type_id] = []
-    sell_orders_by_type[type_id].append(order)
 
 
 def get_order_string(order):
@@ -128,7 +129,7 @@ def print_trade(sell_order, buy_order):
     print('Total Cost:      ' + '{:,}'.format(total_cost))
     print('Units to trade:  ' + '{:,}'.format(get_min_units(sell_order, buy_order)))
     print(
-        'Total Profit:    ' + '{:,}'.format(total_profit) + ' (' + '{:,}'.format(
+        'Total Profit:    ' + '{:,}'.format(round(total_profit, 2)) + ' (' + '{:,}'.format(
             round((total_profit / total_cost * 100), 2)) + '%)')
     print('--')
 
@@ -183,12 +184,78 @@ def find_sell_to_buy(buy_orders_by_type, sell_orders_by_type, threshold_buy_valu
     return profitable
 
 
+def find_sell_to_sell(sell_orders_by_type_dest, sell_orders_by_type_orig, threshold_buy_value, min_profit_percent):
+    """
+    Try to find profitable orders
+    :param sell_orders_by_type_dest:
+    :param sell_orders_by_type_orig:
+    :param threshold_buy_value: threshold buy value (don't consider trades where the units*cost is less than this)
+    :param min_profit_percent: minimum profit % just on unit price
+    :return: list of tuples of possibly profitable trades
+    """
+    profitable = []
+    for type_id in type_ids:
+        if type_id in sell_orders_by_type_dest.keys() and type_id in sell_orders_by_type_orig.keys():
+            # Gather the orders for this type
+            type_sell_orders_orig = sell_orders_by_type_orig[type_id]
+            type_buy_orders_dest = sell_orders_by_type_dest[type_id]
+
+            lowest_sell_order_orig = None
+            lowest_sell_order_dest = None
+
+            for sell_order in type_sell_orders_orig:
+                sell_price = sell_order['price']
+                sell_units = sell_order['volume_remain']
+                sell_total = sell_price * sell_units
+                if lowest_sell_order_orig is not None:
+                    if sell_price < lowest_sell_order_orig['price'] and sell_total >= threshold_buy_value:
+                        lowest_sell_order_orig = sell_order
+                else:
+                    lowest_sell_order_orig = sell_order
+
+            for buy_order in type_buy_orders_dest:
+                buy_price = buy_order['price']
+                buy_units = buy_order['volume_remain']
+                buy_total = buy_price * buy_units
+                if lowest_sell_order_dest is not None:
+                    if buy_price < lowest_sell_order_dest['price'] and buy_total >= threshold_buy_value:
+                        lowest_sell_order_dest = buy_order
+                else:
+                    lowest_sell_order_dest = buy_order
+
+            if lowest_sell_order_orig is not None and lowest_sell_order_dest is not None:
+                total_profit_per_item = lowest_sell_order_dest['price'] - lowest_sell_order_orig['price']
+                profit_percent = total_profit_per_item / lowest_sell_order_orig['price'] * 100
+                if profit_percent >= min_profit_percent:
+                    profitable.append((lowest_sell_order_dest, lowest_sell_order_orig))
+    return profitable
+
+
+##buy_orders = filter_orders_to_system(buy_orders, locations, 'Jita')
+##sell_orders = filter_orders_to_system(sell_orders, locations, 'Jita')
+
+buy_orders_by_type = {}
+# Map the orders to the type of item
+for order in buy_orders:
+    type_id = order['type_id']
+    if type_id not in buy_orders_by_type.keys():
+        buy_orders_by_type[type_id] = []
+    buy_orders_by_type[type_id].append(order)
+
+sell_orders_by_type = {}
+# Map the orders to the type of item
+for order in sell_orders:
+    type_id = order['type_id']
+    if type_id not in sell_orders_by_type.keys():
+        sell_orders_by_type[type_id] = []
+    sell_orders_by_type[type_id].append(order)
+
 # Find profitable trades
 print('Finding profitable trades...')
-profitable_trades = find_sell_to_buy(buy_orders_by_type, sell_orders_by_type, 1000000, 3)
+profitable_trades = find_sell_to_buy(buy_orders_by_type, sell_orders_by_type, 100, 3)
 
 # Print out actually profitable trades within a threshold
-profit_threshold = 10000000
+profit_threshold = 1000000
 for sell, buy in profitable_trades:
     if get_total_profit(sell, buy) >= profit_threshold:
         print_trade(sell, buy)
