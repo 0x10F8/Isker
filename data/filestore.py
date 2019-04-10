@@ -10,9 +10,11 @@ BUY_ORDERS_FILE = 'BUY_ORDERS.json'
 SELL_ORDERS_FILE = 'SELL_ORDERS.json'
 TYPE_IDS_FILE = 'TYPE_IDS.json'
 TYPE_INFO_FILE = 'TYPE_INFO.json'
+SYSTEM_IDS_FILE = 'SYSTEM_IDS.json'
+SYSTEM_INFO_FILE = 'SYSTEM_INFO.json'
 
 ALL_FILES = [REGION_IDS_FILE, REGION_INFO_FILE, MARKET_DATA_FILE, LOCATION_IDS_FILE, LOCATION_INFO_FILE,
-             BUY_ORDERS_FILE, SELL_ORDERS_FILE, TYPE_IDS_FILE, TYPE_INFO_FILE]
+             BUY_ORDERS_FILE, SELL_ORDERS_FILE, TYPE_IDS_FILE, TYPE_INFO_FILE, SYSTEM_IDS_FILE, SYSTEM_INFO_FILE]
 
 
 def do_files_exist():
@@ -35,6 +37,22 @@ def load_object_from_json_file(file_name):
     json_object = file.read()
     file.close()
     return json.loads(json_object)
+
+
+def store_system_ids(system_ids):
+    store_json_object_to_file(system_ids, SYSTEM_IDS_FILE)
+
+
+def load_system_ids():
+    return load_object_from_json_file(SYSTEM_IDS_FILE)
+
+
+def store_system_info(system_info):
+    store_json_object_to_file(system_info, SYSTEM_INFO_FILE)
+
+
+def load_system_info():
+    return load_object_from_json_file(SYSTEM_INFO_FILE)
 
 
 def store_type_ids(type_ids):
